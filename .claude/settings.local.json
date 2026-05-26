@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.produx.design)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(npx --yes chromium-cli screenshot \"http://localhost:5173\" --output \"C:\\\\Users\\\\Shashirekha\\\\AppData\\\\Local\\\\Temp\\\\callohm-landing.png\" --width 1440 --height 900)",
+      "Bash(npx --yes playwright screenshot --browser chromium \"http://localhost:5173\" \"C:\\\\Users\\\\Shashirekha\\\\AppData\\\\Local\\\\Temp\\\\callohm-landing.png\" --viewport-size=\"1440,900\")",
+      "Bash(npx playwright *)",
+      "Bash(npx playwright@latest eval ' *)",
+      "Bash(node screenshot-hiw.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(npm install *)",
+      "Bash(node --experimental-vm-modules ss.mjs)",
+      "Bash(npx vite *)",
+      "Bash(node ss.mjs)",
+      "Bash(Start-Process -WindowStyle Hidden -FilePath \"npx\" -ArgumentList \"vite\",\"--port\",\"5173\")",
+      "Bash(Start-Sleep 3)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(Select-String -Pattern \"CallOHM\")",
+      "Bash(Select-Object -First 1)"
+    ]
+  }
+}
