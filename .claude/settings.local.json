@@ -18,7 +18,10 @@
       "Bash(Start-Sleep 3)",
       "Bash(curl -s http://localhost:5173)",
       "Bash(Select-String -Pattern \"CallOHM\")",
-      "Bash(Select-Object -First 1)"
+      "Bash(Select-Object -First 1)",
+      "Bash(Select-String \"\\\\.env|gitignore\")",
+      "Bash(ipconfig)",
+      "Bash(findstr /i \"IPv4\")"
     ]
   }
 }
