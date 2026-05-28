@@ -21,7 +21,10 @@
       "Bash(Select-Object -First 1)",
       "Bash(Select-String \"\\\\.env|gitignore\")",
       "Bash(ipconfig)",
-      "Bash(findstr /i \"IPv4\")"
+      "Bash(findstr /i \"IPv4\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Shashirekha\\\\Desktop\\\\My Projects\\\\CallOHM-Realestate\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
     ]
   }
 }

@@ -36,7 +36,7 @@ export default function LoginPage() {
     setApiError('')
     try {
       await login(form.email.trim(), form.password)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setApiError(err.message || 'Login failed. Please try again.')
     } finally {
