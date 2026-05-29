@@ -52,7 +52,7 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    const message = body.detail ?? body.message ?? `Request failed with status ${res.status}`
+    const message = body.detail ?? body.message ?? (res.status === 429 ? 'Too many requests - please wait a moment and try again.' : `Request failed with status ${res.status}`)
     const error = new Error(message)
     error.status = res.status
     throw error
@@ -88,15 +88,25 @@ export async function login(email, password) {
 export async function refreshToken() {
   const storedRefreshToken = tokenStorage.getRefreshToken()
   if (!storedRefreshToken) {
+    tokenStorage.clear()
     throw new Error('No refresh token available. Please log in again.')
   }
 
-  const data = await request('/auth/refresh', {
-    method: 'POST',
-    body: JSON.stringify({ refresh_token: storedRefreshToken }),
-  })
-  tokenStorage.save(data)
-  return data
+  try {
+    const data = await request('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: storedRefreshToken }),
+    })
+    tokenStorage.save(data)
+    return data
+  } catch (err) {
+    // Only clear tokens when the refresh token is genuinely rejected (401/403).
+    // For transient errors (429, 5xx, network) keep the session alive.
+    if (err.status === 401 || err.status === 403) {
+      tokenStorage.clear()
+    }
+    throw err
+  }
 }
 
 /**

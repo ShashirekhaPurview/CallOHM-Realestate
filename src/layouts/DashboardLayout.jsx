@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Phone, BarChart3,
   Megaphone, Settings, ChevronLeft, ChevronRight,
-  LogOut, Bell, Menu, X, Zap, Bot,
+  LogOut, Bell, Menu, X, Zap, Bot, FileText,
 } from 'lucide-react'
 import { logout, tokenStorage } from '../apiservices/loginService'
 
@@ -11,18 +11,19 @@ const NAV = [
   {
     section: 'Main',
     items: [
-      { icon: Bot,             label: 'Agent',       to: '/dashboard/agent',      badge: null  },
-      { icon: LayoutDashboard, label: 'Dashboard',   to: '/dashboard',            badge: null  },
-      { icon: Users,           label: 'Leads',       to: '/dashboard/leads',      badge: '23'  },
-      { icon: Phone,           label: 'Calls',       to: '/dashboard/calls',      badge: null  },
-      { icon: BarChart3,       label: 'Analytics',   to: '/dashboard/analytics',  badge: null  },
+      { icon: Bot, label: 'Agent', to: '/dashboard/agent', badge: null },
+      { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard', badge: null },
+      { icon: Users, label: 'Leads', to: '/dashboard/leads', badge: '23' },
+      { icon: Phone, label: 'Calls', to: '/dashboard/calls', badge: null },
+      { icon: BarChart3, label: 'Analytics', to: '/dashboard/analytics', badge: null },
     ],
   },
   {
     section: 'Manage',
     items: [
+      { icon: FileText, label: 'Prompts',   to: '/dashboard/prompts',   badge: null },
       { icon: Megaphone, label: 'Campaigns', to: '/dashboard/campaigns', badge: null },
-      { icon: Settings,  label: 'Settings',  to: '/dashboard/settings',  badge: null },
+      { icon: Settings, label: 'Settings',  to: '/dashboard/settings',  badge: null },
     ],
   },
 ]
@@ -41,7 +42,7 @@ function NavItem({ icon: Icon, label, to, badge, collapsed }) {
         <>
           {/* torch spotlight — all clipped inside element */}
           {isActive && (
-            <span className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+            <span className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none" style={{ animation: 'torchReveal 0.4s ease-out forwards' }}>
 
               {/* filled cone — stays visible all the way across, fades gently */}
               <span className="absolute inset-0" style={{
@@ -104,10 +105,10 @@ function NavItem({ icon: Icon, label, to, badge, collapsed }) {
 }
 
 export default function DashboardLayout() {
-  const [collapsed, setCollapsed]   = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const navigate  = useNavigate()
-  const location  = useLocation()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   /* redirect if not logged in */
   useEffect(() => {
@@ -151,7 +152,7 @@ export default function DashboardLayout() {
       >
         {collapsed
           ? <ChevronRight className="w-3 h-3 text-white/50" />
-          : <ChevronLeft  className="w-3 h-3 text-white/50" />
+          : <ChevronLeft className="w-3 h-3 text-white/50" />
         }
       </button>
 
@@ -265,13 +266,14 @@ export default function DashboardLayout() {
 function PageTitle() {
   const location = useLocation()
   const map = {
-    '/dashboard':            'Dashboard',
-    '/dashboard/agent':      'Agent',
-    '/dashboard/leads':      'Leads',
-    '/dashboard/calls':      'Calls',
-    '/dashboard/analytics':  'Analytics',
-    '/dashboard/campaigns':  'Campaigns',
-    '/dashboard/settings':   'Settings',
+    '/dashboard': 'Dashboard',
+    '/dashboard/agent': 'Agent',
+    '/dashboard/leads': 'Leads',
+    '/dashboard/calls': 'Calls',
+    '/dashboard/analytics': 'Analytics',
+    '/dashboard/prompts':   'Prompts',
+    '/dashboard/campaigns': 'Campaigns',
+    '/dashboard/settings': 'Settings',
   }
   return (
     <h1 className="text-[15px] font-bold text-[#1c0700]">

@@ -20,6 +20,7 @@ import AnalyticsPage      from './pages/dashboard/AnalyticsPage'
 import CampaignsPage      from './pages/dashboard/CampaignsPage'
 import SettingsPage       from './pages/dashboard/SettingsPage'
 import AgentPage          from './pages/dashboard/AgentPage'
+import PromptsPage        from './pages/dashboard/PromptsPage'
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="settings"  element={<SettingsPage />} />
+          <Route path="prompts"   element={<PromptsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

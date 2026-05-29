@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle2, Home } from 'lucide-react'
-import { FALLBACK_COUNTRY_CODES } from '../data/countryCodes'
+import { getCountryCodes } from '../apiservices/contactsService'
 import SearchableSelect from '../components/common/SearchableSelect'
 
 const FLAG_MAP = {
@@ -15,16 +15,6 @@ const FLAG_MAP = {
   ES:'🇪🇸', PT:'🇵🇹', NL:'🇳🇱', BE:'🇧🇪', SE:'🇸🇪', NO:'🇳🇴', DK:'🇩🇰',
   FI:'🇫🇮', CH:'🇨🇭', AT:'🇦🇹', HK:'🇭🇰', TW:'🇹🇼',
 }
-
-const COUNTRIES = FALLBACK_COUNTRY_CODES.map(c => ({
-  ...c,
-  flag: FLAG_MAP[c.isoCode] ?? '🏳',
-}))
-
-const COUNTRY_OPTIONS = COUNTRIES.map(c => ({
-  value: c.isoCode,
-  label: `${c.flag}  ${c.name}  (${c.dialCode})`,
-}))
 
 const STATS = [
   { num: '3x',   label: 'More leads qualified per day vs your current team' },
@@ -42,12 +32,37 @@ const inputCls = (err) =>
 
 export default function BookDemoPage() {
   const navigate = useNavigate()
+  const [countryCodes, setCountryCodes] = useState([])
+
+  useEffect(() => {
+    getCountryCodes()
+      .then(data => setCountryCodes(data?.countryCodes ?? []))
+      .catch(() => {})
+  }, [])
+
+  const countries = countryCodes.map(c => ({
+    ...c,
+    flag: FLAG_MAP[c.isoCode] ?? '🏳',
+  }))
+
+  const COUNTRY_OPTIONS = countries.map(c => ({
+    value: c.isoCode,
+    label: `${c.flag}  ${c.name}  (${c.dialCode})`,
+  }))
+
   const [form, setForm] = useState({
     fullName: '', org: '', email: '', phone: '', looking: '',
-    country: COUNTRIES[0],
+    country: null,
   })
   const [errors, setErrors]       = useState({})
   const [submitted, setSubmitted] = useState(false)
+
+  // Set default country once codes are loaded
+  useEffect(() => {
+    if (countries.length > 0 && !form.country) {
+      setForm(f => ({ ...f, country: countries[0] }))
+    }
+  }, [countries.length])
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }))
@@ -55,7 +70,7 @@ export default function BookDemoPage() {
   }
 
   const handleCountryChange = (isoCode) => {
-    const found = COUNTRIES.find(c => c.isoCode === isoCode)
+    const found = countries.find(c => c.isoCode === isoCode)
     if (found) {
       setForm(f => ({ ...f, country: found, phone: '' }))
       setErrors(e => ({ ...e, phone: '' }))
@@ -72,7 +87,7 @@ export default function BookDemoPage() {
     if (!form.phone.trim())    e.phone    = 'Required'
     else if (!/^\d+$/.test(form.phone))
                                e.phone    = 'Digits only'
-    else if (form.phone.length < form.country.minLength || form.phone.length > form.country.maxLength)
+    else if (form.country && (form.phone.length < form.country.minLength || form.phone.length > form.country.maxLength))
                                e.phone    = form.country.minLength === form.country.maxLength
                                  ? `Must be ${form.country.minLength} digits`
                                  : `Must be ${form.country.minLength}-${form.country.maxLength} digits`
@@ -109,9 +124,11 @@ export default function BookDemoPage() {
     )
   }
 
-  const phoneLenHint = form.country.minLength === form.country.maxLength
-    ? `${form.country.minLength} digits`
-    : `${form.country.minLength}-${form.country.maxLength} digits`
+  const phoneLenHint = form.country
+    ? form.country.minLength === form.country.maxLength
+      ? `${form.country.minLength} digits`
+      : `${form.country.minLength}-${form.country.maxLength} digits`
+    : 'Phone number'
 
   return (
     <div className="h-screen flex flex-col lg:flex-row overflow-hidden">
@@ -164,7 +181,7 @@ export default function BookDemoPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <SearchableSelect
-                  value={form.country.isoCode}
+                  value={form.country?.isoCode ?? ''}
                   onChange={handleCountryChange}
                   options={COUNTRY_OPTIONS}
                   placeholder="Country"
@@ -176,7 +193,7 @@ export default function BookDemoPage() {
                 <input type="tel"
                   placeholder={phoneLenHint}
                   value={form.phone}
-                  maxLength={form.country.maxLength}
+                  maxLength={form.country?.maxLength}
                   onChange={e => set('phone', e.target.value.replace(/\D/g, ''))}
                   className={inputCls(errors.phone)} />
                 {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}

@@ -71,3 +71,8 @@
     color: white;
   }
 }
+
+@keyframes torchReveal {
+  0% { clip-path: inset(0 0 0 100%); opacity: 0.2; }
+  100% { clip-path: inset(0 0 0 0); opacity: 1; }
+}

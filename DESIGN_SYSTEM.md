@@ -12,7 +12,7 @@ Use this file as a reference whenever building new pages or components. Check he
 |------|-------|-----------------|
 | `LandingPage.jsx` | `/` | Assembles all 11 landing sections in order. No logic here - just imports. |
 | `LoginPage.jsx` | `/login` | Full-screen dark auth page. Glassmorphism card, animated rings, real API integration via `loginService`. |
-| `BookDemoPage.jsx` | `/book-demo` | Split layout form (left) + orange brand panel (right). Uses `SearchableSelect` for country picker and `FALLBACK_COUNTRY_CODES` for phone validation. |
+| `BookDemoPage.jsx` | `/book-demo` | Split layout form (left) + orange brand panel (right). Uses `SearchableSelect` for country picker; fetches country codes from `getCountryCodes()` (contactsService) on mount. |
 | `PricingPage.jsx` | `/pricing` | 3-tier pricing cards with feature lists. |
 | `AboutPage.jsx` | `/about` | Company story and values. |
 | `LeadershipPage.jsx` | `/leadership` | Team member cards. |
@@ -46,7 +46,7 @@ Sections appear on the homepage in this order:
 
 #### `SearchableSelect.jsx`
 
-Dropdown with optional search. Renders via React portal to avoid clipping inside `overflow:hidden` containers.
+Branded dropdown with optional search. Renders via React portal to avoid clipping inside `overflow:hidden` containers. Always use this - never use a native `<select>`.
 
 ```jsx
 import SearchableSelect from '../components/common/SearchableSelect'
@@ -57,15 +57,28 @@ import SearchableSelect from '../components/common/SearchableSelect'
   options={[{ value: 'IN', label: '🇮🇳 India (+91)' }]}
   placeholder="Select country"
   icon={Globe}          // lucide-react icon component (optional)
-  searchable={true}     // shows search input (default: false)
-  isDarkMode={false}    // dark theme (default: false)
+  searchable={true}     // shows search input inside dropdown (default: false)
+  isDarkMode={false}    // glassmorphism dark theme (default: false)
   size="md"             // 'sm' | 'md' | 'lg' (default: 'md')
   disabled={false}
   emptyText="No results"
 />
 ```
 
-Size heights: `sm` = 32px, `md` = 40px, `lg` = 48px.
+Size heights: `sm` = 32px, `md` = 40px, `lg` = 44px.
+
+**Theme (light - default):**
+- Trigger: `bg-white border-orange-200 text-[#1c0700]`, hover `border-orange-300`, open `border-orange-400 ring-2 ring-orange-100`
+- Placeholder: `text-amber-900/35`
+- Dropdown panel: `bg-white border-orange-100 shadow-[0_8px_32px_rgba(234,88,12,0.10)]`
+- Selected item: `bg-orange-50 text-orange-600` + orange check icon
+- Hover item: `hover:bg-orange-50/60`
+- Scrollbar: orange thumb (`#fdba74`), brightens to `#f97316` on hover
+
+**Theme (dark - `isDarkMode`):**
+- Trigger: `rgba(255,255,255,0.07)` bg, `border-white/12`, open `border-orange-500/70 ring-orange-500/15`
+- Dropdown panel: `#1a0800` bg, `border-white/10`
+- Selected item: `bg-orange-500/10 text-orange-400`
 
 #### `LegalPageLayout.jsx`
 
@@ -83,30 +96,6 @@ import LegalPageLayout from '../components/LegalPageLayout'
 
 Cookie consent banner. Already added to `App.jsx` - do not add again.
 
-### Shared Data (`src/data/`)
-
-#### `countryCodes.js`
-
-```jsx
-import { FALLBACK_COUNTRY_CODES } from '../data/countryCodes'
-
-// Each entry:
-{
-  name: "India",
-  dialCode: "+91",
-  isoCode: "IN",     // use as option value
-  minLength: 10,     // min digits for phone validation
-  maxLength: 10      // max digits for phone validation
-}
-
-// Convert to SearchableSelect options:
-const options = FALLBACK_COUNTRY_CODES.map(c => ({
-  value: c.isoCode,
-  label: `${FLAG_MAP[c.isoCode] ?? ''} ${c.name} (${c.dialCode})`
-}))
-```
-
-140+ countries. India is listed first.
 
 ### Dashboard Pages (`src/pages/dashboard/`)
 
@@ -114,7 +103,7 @@ const options = FALLBACK_COUNTRY_CODES.map(c => ({
 |------|-------|-----------------|
 | `DashboardPage.jsx` | `/dashboard` | Time-of-day greeting, 4 metric cards, recent calls table, 3 quick stat cards |
 | `AgentPage.jsx` | `/dashboard/agent` | Tabbed agent viewer - Default Agent + Company Agents. Uses `AgentCard` (list) and `AgentDetail` (full view). Fetches via `agentService.js`. |
-| `LeadsPage.jsx` | `/dashboard/leads` | Lead management (placeholder) |
+| `LeadsPage.jsx` | `/dashboard/leads` | Category CRUD (list, create, edit, delete with type-to-confirm) + contacts drill-down per category (search, add, edit, upload, download template, delete, paginated). Fetches via `categoriesService.js` and `contactsService.js`. |
 | `CallsPage.jsx` | `/dashboard/calls` | Call history (placeholder) |
 | `AnalyticsPage.jsx` | `/dashboard/analytics` | Analytics and reporting (placeholder) |
 | `CampaignsPage.jsx` | `/dashboard/campaigns` | Campaign management (placeholder) |
@@ -214,6 +203,92 @@ Display field mapping:
 
 **Important:** Always use IDs from the agent response. Never hardcode sub-resource IDs.
 
+#### `categoriesService.js`
+
+Same auto-refresh pattern as `agentService.js`. Used by `LeadsPage` for category management.
+
+```jsx
+import {
+  getCategories, createCategory, searchCategories,
+  getCategoryById, updateCategory, deleteCategory,
+} from '../apiservices/categoriesService'
+
+// List all categories (basic - no contact_count)
+const { total, categories } = await getCategories()
+
+// Search/list with contact_count - use this for the leads page
+const { total, categories } = await searchCategories()
+// Each category has: categoryID, categoryName, description, user_id, contacts[], contact_count
+
+// Filtered search
+await searchCategories({ category_id: 'CAT_xxx' })
+await searchCategories({ category_name: 'test' })
+
+// Create
+await createCategory({ categoryName: 'Hot Leads', description: 'Top priority' })
+
+// Update
+await updateCategory(categoryID, { categoryName: 'Updated', description: '...' })
+
+// Delete (also deletes all contacts in the category)
+await deleteCategory(categoryID)
+```
+
+Response shape for `searchCategories()`:
+```json
+{
+  "total": 1,
+  "categories": [{
+    "categoryID": "CAT_xxx",
+    "categoryName": "Avalon Agent",
+    "description": "Call Leads",
+    "user_id": "...",
+    "contacts": [],
+    "contact_count": 0
+  }]
+}
+```
+
+#### `contactsService.js`
+
+Handles individual contacts within categories. Same auto-refresh pattern. `getCountryCodes()` is public (no auth).
+
+```jsx
+import {
+  getCountryCodes, getContacts, createContact, updateContact, deleteContact,
+  searchContacts, downloadTemplate, uploadContacts,
+} from '../apiservices/contactsService'
+
+// Country codes (public - no auth needed). Returns array of objects.
+const codes = await getCountryCodes()
+// Each entry: { name, dialCode, isoCode, minLength, maxLength }
+
+// List contacts in a category (paginated)
+const { contacts, total } = await getContacts(categoryId, limit=10, offset=0)
+
+// Search contacts
+await searchContacts({ category_id, phone_number, name, size })
+
+// Create contact
+await createContact({ contactName, countryCode: 'IN', phoneNumber: '9876543210', categoryID })
+
+// Update contact (changing categoryID moves the contact to another category)
+await updateContact(customerId, { contactName, countryCode, phoneNumber, categoryID })
+
+// Delete contact
+await deleteContact(customerId)
+
+// Download Excel/CSV template for bulk upload
+const { blob, filename } = await downloadTemplate(categoryId, 'excel') // or 'csv'
+const url = URL.createObjectURL(blob)
+const a = document.createElement('a')
+a.href = url; a.download = filename; a.click()
+URL.revokeObjectURL(url)
+
+// Upload contacts (FormData - do NOT set Content-Type header)
+await uploadContacts(categoryId, file)
+```
+
 #### `loginService.js`
 
 All auth-related API calls. Import only what you need.
@@ -244,6 +319,18 @@ tokenStorage.clear()
 Token storage keys in `localStorage`: `callohm_access_token`, `callohm_refresh_token`, `callohm_token_expires_at`.
 
 All functions throw an `Error` with a `.status` property on HTTP failures. Always wrap in try/catch.
+
+**Session expiry / token handling:** `refreshToken()` in `loginService.js` only clears stored tokens when the server responds with 401 or 403 (refresh token genuinely rejected). Transient errors (429, 5xx, network failures) do NOT clear tokens - the session stays alive and the page shows an error message instead.
+
+All three authenticated services (`agentService`, `categoriesService`, `contactsService`) check `!tokenStorage.isLoggedIn()` after a failed refresh - only redirecting to `/login` if tokens were actually cleared. This means a rate-limit spike or a momentary server blip never logs the user out.
+
+| Refresh fails with | Tokens cleared | Redirect to /login | User sees |
+|---|---|---|---|
+| 401 / 403 (token rejected) | Yes | Yes | Login page |
+| 429 (rate limit) | No | No | Error message, stays logged in |
+| 5xx / network error | No | No | Error message, stays logged in |
+
+**429 Too Many Requests:** all services map this to "Too many requests - please wait a moment and try again." instead of the raw status code. Show via the existing error state in the page.
 
 ---
 
@@ -509,39 +596,67 @@ On dark backgrounds:
 </label>
 ```
 
-### Country + Phone Picker (BookDemoPage pattern)
+### Country + Phone Picker
+
+Country codes come from the API (`getCountryCodes()`), not a static file. Country code dropdown and phone input always appear side-by-side in one row under a single "Phone Number" label.
 
 ```jsx
 import SearchableSelect from '../components/common/SearchableSelect'
-import { FALLBACK_COUNTRY_CODES } from '../data/countryCodes'
+import { getCountryCodes } from '../apiservices/contactsService'
 
-const FLAG_MAP = { IN: '🇮🇳', US: '🇺🇸', GB: '🇬🇧' /* ... */ }
+const [countryCodes, setCountryCodes] = useState([])
+useEffect(() => {
+  getCountryCodes().then(data => setCountryCodes(data)).catch(() => {})
+}, [])
 
-const COUNTRY_OPTIONS = FALLBACK_COUNTRY_CODES.map(c => ({
-  value: c.isoCode,
-  label: `${FLAG_MAP[c.isoCode] ?? ''} ${c.name} (${c.dialCode})`
-}))
+const sortedCodes = [...countryCodes].sort((a, b) => a.name.localeCompare(b.name))
+const selectedCountry = countryCodes.find(c => c.dialCode === form.countryCode)
+const phoneLenHint = selectedCountry
+  ? selectedCountry.minLength === selectedCountry.maxLength
+    ? `Must be ${selectedCountry.minLength} digits`
+    : `Must be ${selectedCountry.minLength}-${selectedCountry.maxLength} digits`
+  : null
 
-const [countryCode, setCountryCode] = useState('IN')
-const selectedCountry = FALLBACK_COUNTRY_CODES.find(c => c.isoCode === countryCode)
-
-<div className="flex gap-2">
-  <SearchableSelect
-    value={countryCode}
-    onChange={setCountryCode}
-    options={COUNTRY_OPTIONS}
-    searchable
-    size="md"
-    className="w-[160px] flex-shrink-0"
-  />
-  <input
-    type="tel"
-    maxLength={selectedCountry?.maxLength}
-    placeholder={`${selectedCountry?.minLength ?? 10} digits`}
-    className="flex-1 ..."
-  />
+<div>
+  <label className="block text-[11px] font-bold text-amber-900/50 uppercase tracking-wider mb-1.5">
+    Phone Number
+  </label>
+  <div className="flex gap-2">
+    <SearchableSelect
+      value={form.countryCode}
+      onChange={val => setForm(f => ({ ...f, countryCode: val, phoneNumber: '' }))}
+      options={sortedCodes.map(c => ({ value: c.dialCode, label: `${c.dialCode} ${c.name}` }))}
+      placeholder="Code"
+      searchable
+      size="md"
+      className="w-[140px] flex-shrink-0"
+    />
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      maxLength={selectedCountry?.maxLength}
+      value={form.phoneNumber}
+      onChange={e => {
+        const digits = e.target.value.replace(/\D/g, '')
+        const capped = selectedCountry ? digits.slice(0, selectedCountry.maxLength) : digits
+        setForm(f => ({ ...f, phoneNumber: capped }))
+      }}
+      placeholder={phoneLenHint ?? 'Phone number'}
+      className="flex-1 px-3 py-2.5 rounded-xl border border-orange-100 bg-orange-50/30 text-[13px] font-semibold text-[#1c0700] placeholder:text-amber-900/25 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all"
+    />
+  </div>
+  {phoneLenHint && (
+    <p className="text-[11px] text-amber-900/45 mt-1">{phoneLenHint}</p>
+  )}
 </div>
 ```
+
+Rules:
+- Use `type="text"` + `inputMode="numeric"` - never `type="number"` (avoids up/down spinners)
+- Strip non-digits in `onChange` with `.replace(/\D/g, '')`
+- Cap at `selectedCountry.maxLength` via both `maxLength` attr and `.slice()` (handles paste)
+- The `value` stored in form state for country is `dialCode` (e.g., `"+91"`), not `isoCode`
 
 ---
 
@@ -666,6 +781,26 @@ All dashboard pages use this wrapper (no layout/padding provided by DashboardLay
 </div>
 ```
 
+### Dashboard Page Heading Rule
+
+The top bar already shows the page title - do NOT repeat it as an `<h2>` inside the page body.
+
+- **Content-rich pages** (Leads, Agents): show only a subtitle `<p>` and any action buttons. No `<h2>`.
+- **Placeholder pages** (Calls, Analytics, Campaigns, Settings): no heading block at all - the placeholder card carries its own description.
+
+```jsx
+{/* Leads / Agents - subtitle + action button only */}
+<div className="flex items-start justify-between mb-5 gap-4">
+  <p className="text-[13px] text-amber-900/40">Manage your contact categories and leads</p>
+  <button ...>+ New Category</button>
+</div>
+
+{/* Placeholder pages - no heading block, jump straight to content */}
+<div className="flex items-center justify-center h-64 rounded-2xl border-2 border-dashed border-orange-100 bg-orange-50/30">
+  ...
+</div>
+```
+
 ### Dashboard Info Card (`Card` component in AgentPage)
 
 ```jsx
@@ -726,6 +861,69 @@ const colorMap = {
 </div>
 ```
 
+### Type-to-Confirm Delete Modal
+
+Used on LeadsPage. Requires the user to type the exact item name before the delete button activates. Prevents accidental destructive actions.
+
+```jsx
+function DeleteModal({ item, saving, onClose, onConfirm }) {
+  const [typed, setTyped] = useState('')
+  const confirmed = typed === item?.name
+
+  return (
+    // warning banner + input + buttons
+    <input
+      value={typed}
+      onChange={e => setTyped(e.target.value)}
+      style={{
+        borderColor: typed.length > 0 ? (confirmed ? '#10b981' : '#f87171') : undefined,
+        background:  typed.length > 0 ? (confirmed ? 'rgba(16,185,129,0.04)' : 'rgba(248,113,113,0.04)') : 'rgba(255,247,237,0.5)',
+      }}
+    />
+    <button
+      disabled={!confirmed || saving}
+      style={{ background: confirmed ? '#ef4444' : '#fca5a5', cursor: confirmed && !saving ? 'pointer' : 'not-allowed' }}
+    >
+      Delete
+    </button>
+  )
+}
+```
+
+Rules:
+- Input border turns GREEN when typed === item name exactly
+- Input border turns RED while typing but not yet matching
+- Delete button is faded pink and `not-allowed` until name matches
+- Always show: "Type **[item name]** to confirm deletion" above the input
+- Warning banner: "This will permanently delete ... This action cannot be undone."
+
+### LeadsPage Contact Form
+
+**Add Contact** - 3 fields only: Contact Name, Phone Number (country code + number inline), no category selector. The `categoryID` is taken silently from the current drill-down category.
+
+**Edit Contact** - same 3 fields plus a "Move to Category" `SearchableSelect` that lets users relocate the contact to a different category. Changing the category on save moves the contact server-side.
+
+After every create, edit, or delete the page calls both `refreshContacts()` (updates the contacts table) and `fetchCategories()` (updates the `contact_count` on category cards).
+
+### LeadsPage Category Card
+
+```jsx
+<div className="bg-white rounded-2xl border border-orange-100 hover:shadow-[0_4px_20px_rgba(234,88,12,0.08)] hover:border-orange-200 transition-all duration-200 overflow-hidden flex flex-col">
+  <div className="flex items-start gap-3 px-5 pt-5 pb-3 flex-1">
+    <span className="w-3 h-3 rounded-full mt-1" style={{ background: colorFor(cat.categoryID) }} />
+    <div>
+      <h3 className="text-[14px] font-extrabold text-[#1c0700]">{cat.categoryName}</h3>
+      <p className="text-[12px] text-amber-900/45 mt-1 line-clamp-2">{cat.description}</p>
+    </div>
+  </div>
+  <div className="flex items-center justify-between px-5 py-3 border-t border-orange-50 bg-orange-50/20">
+    {/* contact count badge + edit/delete icon buttons */}
+  </div>
+</div>
+```
+
+Category color is deterministic from `categoryID` - use a `colorFor(id)` function that sums char codes and indexes into a fixed palette of orange/amber shades. This gives each category a consistent color without storing it.
+
 ### InfoRow (key-value pairs in cards)
 
 ```jsx
@@ -740,7 +938,7 @@ const colorMap = {
 ## Dos and Don'ts
 
 ### Do
-- Import `FALLBACK_COUNTRY_CODES` from `src/data/countryCodes.js` for any phone/country field
+- Fetch country codes via `getCountryCodes()` from `contactsService.js` on mount - never use a static list
 - Import `SearchableSelect` from `src/components/common/SearchableSelect.jsx` for any dropdown with search
 - Import auth functions from `src/apiservices/loginService.js` - never call auth endpoints directly
 - Use `import.meta.env.VITE_API_BASE_URL` for the API base URL
@@ -751,8 +949,10 @@ const colorMap = {
 - Don't use em dashes (—) or en dashes (–) anywhere - use hyphens (-) or commas
 - Don't hardcode API URLs or IP addresses - always use the env variable
 - Don't hardcode sub-resource IDs (llmID, voiceID, sttID, promptID, categoryID) - always read from the agent response
-- Don't duplicate the country codes array - import from `src/data/countryCodes.js`
-- Don't build a new dropdown component - use `SearchableSelect` with `searchable` prop
+- Don't hardcode country codes - always fetch from `getCountryCodes()` (contactsService)
+- Don't build a new dropdown component and never use native `<select>` - always use `SearchableSelect`
+- Don't use `type="number"` for phone inputs - use `type="text"` + `inputMode="numeric"` to avoid browser spinners
+- Don't add an `<h2>` page title inside dashboard pages - the top bar already shows it
 - Don't use `<a href="...">` for internal SPA routes - use `<Link to="...">` from react-router-dom
 - Don't add `console.log` statements before committing
-- Don't call auth endpoints or add token headers manually in page components - use the service functions which handle refresh automatically
+- Don't call auth endpoints or add token headers manually in page components - use the service functions which handle refresh and redirect automatically

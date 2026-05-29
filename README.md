@@ -47,9 +47,10 @@ src/
     LandingPage/   # Landing page section components
     common/        # Reusable UI components (use these everywhere)
   apiservices/     # API call functions (one file per service domain)
-    loginService.js  # Auth: login, logout, refreshToken, getMe, tokenStorage
-    agentService.js  # Agent: getAgentById, getFullAgentById, getLLM, getVoice, etc.
-  data/            # Static data arrays shared across the app
+    loginService.js      # Auth: login, logout, refreshToken, getMe, tokenStorage
+    agentService.js      # Agent: getAgentById, getFullAgentById, getLLM, getVoice, etc.
+    categoriesService.js # Categories: getCategories, searchCategories, createCategory, updateCategory, deleteCategory
+    contactsService.js   # Contacts: getContacts, createContact, updateContact, deleteContact, searchContacts, downloadTemplate, uploadContacts, getCountryCodes
   assets/          # Images and static files
   App.jsx          # Router with all routes
   App.css          # Global animations and component classes
@@ -85,7 +86,7 @@ All dashboard routes are nested under `DashboardLayout` which provides the sideb
 |-------|------|-------------|
 | `/dashboard` | DashboardPage | Overview with metrics, recent calls |
 | `/dashboard/agent` | AgentPage | View and manage AI agents (tabbed: Default / Company) |
-| `/dashboard/leads` | LeadsPage | Lead management |
+| `/dashboard/leads` | LeadsPage | Category management (list, create, edit, delete with type-to-confirm) + contacts drill-down per category (search, add, edit, upload, download template, delete, paginated) |
 | `/dashboard/calls` | CallsPage | Call history and recordings |
 | `/dashboard/analytics` | AnalyticsPage | Call analytics and reporting |
 | `/dashboard/campaigns` | CampaignsPage | Campaign management |
